@@ -6314,7 +6314,7 @@ const SuppliersTab = memo(function SuppliersTab({
   };
 
   return (
-    <>
+    <div className="page-container">
       <PageHeader
         icon={<Users size={20} />}
         iconBg="var(--primary-light)"
@@ -6336,6 +6336,7 @@ const SuppliersTab = memo(function SuppliersTab({
       <div className="card" style={{ marginTop: 20 }}>
         {filtered.length === 0 ? (
           <EmptyState
+            icon={<Users size={32} />}
             title="No suppliers found"
             subtitle="Add suppliers to keep track of vendors."
           />
@@ -6434,6 +6435,6 @@ const SuppliersTab = memo(function SuppliersTab({
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 });
