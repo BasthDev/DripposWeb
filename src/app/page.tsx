@@ -6380,30 +6380,28 @@ const SuppliersTab = memo(function SuppliersTab({
       </div>
 
       {isModalOpen && (
-        <div className="modal-overlay">
-          <div className="modal-content slide-up" style={{ maxWidth: 400 }}>
+        <div className="modal-overlay" onClick={() => !saving && setIsModalOpen(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>{editingUuid ? "Edit Supplier" : "Add Supplier"}</h2>
+              <span className="modal-title">
+                {editingUuid ? "Edit Supplier" : "Add Supplier"}
+              </span>
               <button
-                className="btn-icon"
+                className="btn btn-ghost btn-icon btn-sm"
                 onClick={() => setIsModalOpen(false)}
+                disabled={saving}
               >
-                <X size={18} />
+                <X size={15} />
               </button>
             </div>
-            <div
-              className="modal-body"
-              style={{ display: "flex", flexDirection: "column", gap: 16 }}
-            >
+            <div className="modal-body">
               <div className="form-group">
-                <label className="form-label">
-                  Name <span className="req">*</span>
-                </label>
+                <label className="form-label">Name *</label>
                 <input
                   className="form-input"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Supplier name"
+                  placeholder="e.g. PT Sari Rasa"
                   autoFocus
                 />
               </div>
@@ -6419,17 +6417,18 @@ const SuppliersTab = memo(function SuppliersTab({
             </div>
             <div className="modal-footer">
               <button
-                className="btn btn-secondary"
+                className="btn btn-secondary btn-sm"
                 onClick={() => setIsModalOpen(false)}
+                disabled={saving}
               >
                 Cancel
               </button>
               <button
-                className="btn btn-primary"
+                className={`btn btn-primary btn-sm${saving ? " btn-spin" : ""}`}
                 onClick={save}
                 disabled={saving || !name}
               >
-                {saving ? "Saving..." : "Save Supplier"}
+                {!saving && (editingUuid ? "Save Changes" : "Add Supplier")}
               </button>
             </div>
           </div>
