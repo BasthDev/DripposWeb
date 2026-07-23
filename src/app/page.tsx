@@ -177,6 +177,7 @@ type Tab =
   | "recipes"
   | "categories"
   | "products"
+  | "suppliers"
   | "account"
   | "subscribe";
 type DateRange = "today" | "week" | "month" | "year" | "all";
@@ -822,78 +823,57 @@ export default function App() {
     return (
       <>
         <div className="login-page">
-          <div className="login-card slide-up">
-            <div className="login-logo" style={{ color: "var(--primary)" }}>
-              <Zap size={40} strokeWidth={2.5} />
-            </div>
-            <div style={{ textAlign: "center", marginBottom: 32 }}>
-              <h1
-                style={{
-                  fontSize: "1.5rem",
-                  fontWeight: 900,
-                  letterSpacing: "-0.02em",
-                }}
-              >
+          <div className="login-glass-card slide-up">
+            <div className="login-header">
+              <div className="login-logo-circle">
+                <Zap size={32} strokeWidth={2.5} color="#fff" />
+              </div>
+              <h1 className="login-title">
                 Drip<span style={{ color: "var(--primary)" }}>POS</span>
               </h1>
-              <p
-                style={{
-                  fontSize: "0.8125rem",
-                  color: "var(--text-muted)",
-                  marginTop: 4,
-                }}
-              >
-                Management Dashboard — Owner Access
+              <p className="login-subtitle">
+                Owner Management Portal
               </p>
             </div>
             {authErr && (
-              <div
-                style={{
-                  background: "var(--danger-light)",
-                  border: "1px solid rgba(239,68,68,0.2)",
-                  borderRadius: "var(--radius-sm)",
-                  padding: "10px 14px",
-                  fontSize: "0.8125rem",
-                  color: "var(--danger)",
-                  marginBottom: 16,
-                  display: "flex",
-                  gap: 8,
-                  alignItems: "center",
-                }}
-              >
+              <div className="auth-error-alert">
                 <AlertTriangle size={14} />
                 {authErr}
               </div>
             )}
-            <form onSubmit={login}>
+            <form onSubmit={login} className="login-form">
               <div className="form-group">
                 <label className="form-label">Email Address</label>
-                <input
-                  className="form-input"
-                  type="email"
-                  placeholder="owner@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
+                <div className="input-wrapper">
+                  <input
+                    className="form-input"
+                    type="email"
+                    placeholder="owner@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
-              <div className="form-group" style={{ marginBottom: 20 }}>
+              <div className="form-group" style={{ marginBottom: 24 }}>
                 <label className="form-label">Password</label>
-                <input
-                  className="form-input"
-                  type="password"
-                  placeholder="••••••••"
-                  value={pass}
-                  onChange={(e) => setPass(e.target.value)}
-                  required
-                />
+                <div className="input-wrapper">
+                  <input
+                    className="form-input"
+                    type="password"
+                    placeholder="••••••••"
+                    value={pass}
+                    onChange={(e) => setPass(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
               <button
                 type="submit"
-                className="btn btn-primary btn-lg"
-                style={{ width: "100%", justifyContent: "center" }}
+                className="btn btn-primary btn-lg btn-login-submit"
+                disabled={loading}
               >
-                Sign In to Dashboard
+                {loading ? "Signing in..." : "Sign In to Dashboard"}
               </button>
             </form>
           </div>
@@ -1079,6 +1059,7 @@ function Dashboard({
     { id: "recipes", label: "Recipes", icon: <BookOpen size={16} /> },
     { id: "categories", label: "Categories", icon: <FolderTree size={16} /> },
     { id: "products", label: "Products", icon: <Box size={16} /> },
+    { id: "suppliers", label: "Suppliers", icon: <Users size={16} /> },
     { id: "account", label: "Account", icon: <LayoutDashboard size={16} /> },
     { id: "subscribe", label: "Subscribe", icon: <CreditCard size={16} /> },
   ];
@@ -1099,6 +1080,7 @@ function Dashboard({
     recipes: "Product recipes & cost structures",
     categories: "Manage product categories",
     products: "Products, pricing & catalog",
+    suppliers: "Manage vendors & supplier info",
     account: "Account & security settings",
     subscribe: "Manage your subscription plan",
   };
@@ -1268,6 +1250,14 @@ function Dashboard({
                         products={products}
                         categories={categories}
                         recipes={recipes}
+                        ownerUuid={user.$id}
+                        showToast={showToast}
+                        onRefresh={refresh}
+                      />
+                    )}
+                    {tab === "suppliers" && (
+                      <SuppliersTab
+                        suppliers={suppliers}
                         ownerUuid={user.$id}
                         showToast={showToast}
                         onRefresh={refresh}
@@ -6243,3 +6233,207 @@ const SubscribeTab = memo(function SubscribeTab({
 function Dash() {
   return <span style={{ color: "var(--text-muted)" }}>—</span>;
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SUPPLIERS TAB
+// ══════════════════════════════════════════════════════════════════════════════
+const SuppliersTab = memo(function SuppliersTab({
+  suppliers,
+  ownerUuid,
+  showToast,
+  onRefresh,
+}: {
+  suppliers: Supplier[];
+  ownerUuid: string;
+  showToast: (m: string, k?: any) => void;
+  onRefresh: () => void;
+}) {
+  const [search, setSearch] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingUuid, setEditingUuid] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [contact, setContact] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const filtered = useMemo(() => {
+    let list = suppliers;
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter(
+        (s) =>
+          s.name.toLowerCase().includes(q) ||
+          (s.contact && s.contact.toLowerCase().includes(q)),
+      );
+    }
+    return list;
+  }, [suppliers, search]);
+
+  const openAdd = () => {
+    setEditingUuid(null);
+    setName("");
+    setContact("");
+    setIsModalOpen(true);
+  };
+
+  const openEdit = (s: Supplier) => {
+    setEditingUuid(s.uuid);
+    setName(s.name);
+    setContact(s.contact || "");
+    setIsModalOpen(true);
+  };
+
+  const save = async () => {
+    if (!name) return showToast("Name is required", "error");
+    setSaving(true);
+    try {
+      const docId = editingUuid || genUuid("sup");
+      await upsertSyncDoc(docId, "supplier", ownerUuid, {
+        uuid: docId,
+        name,
+        contact: contact || null,
+      });
+      showToast(editingUuid ? "Supplier updated" : "Supplier added", "success");
+      setIsModalOpen(false);
+      onRefresh();
+    } catch (err: any) {
+      showToast(`Failed: ${err.message}`, "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const remove = async (id: string) => {
+    if (!confirm("Delete this supplier?")) return;
+    try {
+      await deleteSyncDoc(id, ownerUuid);
+      showToast("Supplier deleted", "success");
+      onRefresh();
+    } catch (err: any) {
+      showToast(`Delete failed: ${err.message}`, "error");
+    }
+  };
+
+  return (
+    <>
+      <PageHeader
+        icon={<Users size={20} />}
+        iconBg="var(--primary-light)"
+        iconColor="var(--primary)"
+        title="Suppliers"
+        subtitle="Manage vendors and supplier information"
+      >
+        <button className="btn btn-primary" onClick={openAdd}>
+          <Plus size={16} /> Add Supplier
+        </button>
+      </PageHeader>
+
+      <FilterBar
+        search={search}
+        onSearch={setSearch}
+        placeholder="Search suppliers..."
+      />
+
+      <div className="card" style={{ marginTop: 20 }}>
+        {filtered.length === 0 ? (
+          <EmptyState
+            title="No suppliers found"
+            subtitle="Add suppliers to keep track of vendors."
+          />
+        ) : (
+          <div className="table-responsive">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Contact</th>
+                  <th style={{ textAlign: "right" }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((s) => (
+                  <tr key={s.uuid}>
+                    <td style={{ fontWeight: 500 }}>{s.name}</td>
+                    <td style={{ color: "var(--text-muted)" }}>
+                      {s.contact || "—"}
+                    </td>
+                    <td style={{ textAlign: "right" }}>
+                      <button
+                        className="btn-icon"
+                        onClick={() => openEdit(s)}
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        className="btn-icon danger"
+                        onClick={() => remove(s.uuid)}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {isModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content slide-up" style={{ maxWidth: 400 }}>
+            <div className="modal-header">
+              <h2>{editingUuid ? "Edit Supplier" : "Add Supplier"}</h2>
+              <button
+                className="btn-icon"
+                onClick={() => setIsModalOpen(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div
+              className="modal-body"
+              style={{ display: "flex", flexDirection: "column", gap: 16 }}
+            >
+              <div className="form-group">
+                <label className="form-label">
+                  Name <span className="req">*</span>
+                </label>
+                <input
+                  className="form-input"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Supplier name"
+                  autoFocus
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Contact Info</label>
+                <input
+                  className="form-input"
+                  value={contact}
+                  onChange={(e) => setContact(e.target.value)}
+                  placeholder="Phone, email, or address"
+                />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button
+                className="btn btn-secondary"
+                onClick={() => setIsModalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={save}
+                disabled={saving || !name}
+              >
+                {saving ? "Saving..." : "Save Supplier"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+});

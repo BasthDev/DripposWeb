@@ -888,28 +888,136 @@ tbody tr:hover { background:var(--surface-2); }
   align-items:center;
   justify-content:center;
   background:
-    radial-gradient(ellipse at 20% 20%, rgba(16,185,129,0.08) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 80%, rgba(59,130,246,0.05) 0%, transparent 60%),
+    radial-gradient(ellipse at 10% 10%, rgba(16,185,129,0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 90% 90%, rgba(59,130,246,0.1) 0%, transparent 50%),
     var(--bg);
   padding:24px;
 }
-.login-card {
-  background:var(--surface);
-  border-radius:var(--radius-2xl);
-  box-shadow:var(--shadow-xl);
-  padding:48px 42px;
-  width:100%;
-  max-width:420px;
-  border:1px solid var(--border);
+.login-glass-card {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: var(--radius-2xl);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  padding: 56px 48px;
+  width: 100%;
+  max-width: 440px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  position: relative;
+  overflow: hidden;
 }
-.login-logo {
-  width:52px; height:52px;
-  background:linear-gradient(135deg,var(--primary),var(--primary-dark));
-  border-radius:14px;
-  display:flex; align-items:center; justify-content:center;
-  font-size:26px;
-  box-shadow:0 8px 24px var(--primary-glow);
-  margin:0 auto 16px;
+.login-glass-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: -100%;
+  width: 50%; height: 100%;
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.03), transparent);
+  transform: skewX(-20deg);
+  animation: shine 8s infinite;
+}
+@keyframes shine {
+  0% { left: -100%; }
+  20% { left: 200%; }
+  100% { left: 200%; }
+}
+.login-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+.login-logo-circle {
+  width: 64px; height: 64px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 24px;
+  box-shadow: 0 12px 32px var(--primary-glow);
+  position: relative;
+}
+.login-logo-circle::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1px solid var(--primary);
+  opacity: 0.3;
+  animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+.login-title {
+  font-size: 2.25rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+.login-subtitle {
+  font-size: 0.9375rem;
+  color: var(--text-muted);
+}
+.text-primary {
+  color: var(--primary);
+}
+.auth-error-alert {
+  background: var(--danger-light);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  font-size: 0.875rem;
+  color: var(--danger);
+  margin-bottom: 24px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-weight: 500;
+  animation: shake 0.4s ease;
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+.input-wrapper {
+  position: relative;
+  border-radius: var(--radius);
+  transition: all 0.2s;
+}
+.input-wrapper:focus-within {
+  transform: translateY(-2px);
+}
+.input-wrapper .form-input {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 14px 16px;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+}
+.input-wrapper .form-input:focus {
+  background: rgba(0, 0, 0, 0.4);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-glow);
+}
+.btn-login-submit {
+  width: 100%;
+  justify-content: center;
+  padding: 16px;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  border-radius: var(--radius);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+.btn-login-submit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px var(--primary-glow);
+}
+.btn-login-submit:active {
+  transform: translateY(0);
 }
 
 /* ══════════════════════════════════════════════════════════════
