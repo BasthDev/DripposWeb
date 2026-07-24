@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  createSubscriptionCheckout,
+  formatSubscriptionAmount,
+  SUBSCRIPTION_PLANS,
+} from "@/lib/paddle";
+import { AlertCircle, CheckCircle, Loader2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { createSubscriptionCheckout, SUBSCRIPTION_PLANS, formatSubscriptionAmount } from "@/lib/paddle";
-import { CheckCircle, Loader2, AlertCircle } from "lucide-react";
+import { Suspense, useEffect, useState } from "react";
 
-export default function SubscriptionPage() {
+function SubscriptionContent() {
   const searchParams = useSearchParams();
   const plan = searchParams.get("plan");
   const userId = searchParams.get("userId");
@@ -31,7 +35,9 @@ export default function SubscriptionPage() {
     handleSubscribe(planDetails);
   }, [plan, userId]);
 
-  const handleSubscribe = async (planDetails: typeof SUBSCRIPTION_PLANS[0]) => {
+  const handleSubscribe = async (
+    planDetails: (typeof SUBSCRIPTION_PLANS)[0],
+  ) => {
     setLoading(true);
     setError(null);
 
@@ -50,13 +56,17 @@ export default function SubscriptionPage() {
         setError("Failed to create checkout");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create checkout");
+      setError(
+        err instanceof Error ? err.message : "Failed to create checkout",
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const planDetails = plan ? SUBSCRIPTION_PLANS.find((p) => p.id === plan) : null;
+  const planDetails = plan
+    ? SUBSCRIPTION_PLANS.find((p) => p.id === plan)
+    : null;
 
   if (error) {
     return (
@@ -115,7 +125,11 @@ export default function SubscriptionPage() {
           <p className="text-sm text-gray-600 mb-2">Plan Details:</p>
           <p className="font-semibold text-gray-900">{planDetails?.name}</p>
           <p className="text-2xl font-bold text-blue-600">
-            {planDetails && formatSubscriptionAmount(planDetails.amount, planDetails.currency)}
+            {planDetails &&
+              formatSubscriptionAmount(
+                planDetails.amount,
+                planDetails.currency,
+              )}
             <span className="text-sm font-normal text-gray-600">/month</span>
           </p>
         </div>
@@ -130,5 +144,22 @@ export default function SubscriptionPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function SubscriptionPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading...</p>
+          </div>
+        </div>
+      }
+    >
+      <SubscriptionContent />
+    </Suspense>
   );
 }
