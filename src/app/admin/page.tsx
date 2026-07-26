@@ -45,6 +45,16 @@ export default function AdminPortal() {
     }
   }, []);
 
+  // Auto-calculate end date when duration or start date changes
+  useEffect(() => {
+    if (planStartDate && planDuration) {
+      const startDate = new Date(planStartDate);
+      const endDate = new Date(startDate);
+      endDate.setMonth(endDate.getMonth() + planDuration);
+      setPlanEndDate(endDate.toISOString().split("T")[0]);
+    }
+  }, [planDuration, planStartDate]);
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (username === "basthdev" && password === "@Achmed04") {
@@ -92,19 +102,16 @@ export default function AdminPortal() {
     setIsFreeTrial(userPlan.isFreeTrial || false);
     setIsLegacyUser(legacy);
 
-    // Set dates
+    // Set start date
     if (userPlan.startDate) {
       setPlanStartDate(new Date(userPlan.startDate).toISOString().split("T")[0]);
     } else {
       setPlanStartDate(new Date().toISOString().split("T")[0]);
     }
 
+    // Set end date (will be auto-calculated by useEffect)
     if (userPlan.endDate) {
       setPlanEndDate(new Date(userPlan.endDate).toISOString().split("T")[0]);
-    } else {
-      const d = new Date();
-      d.setMonth(d.getMonth() + (userPlan.duration || 1));
-      setPlanEndDate(d.toISOString().split("T")[0]);
     }
   };
 
@@ -112,6 +119,13 @@ export default function AdminPortal() {
     if (!selectedUser) return;
     setSaving(true);
     try {
+      // Ensure end date is calculated based on duration and start date
+      const startDate = planStartDate ? new Date(planStartDate) : new Date();
+      const endDate = new Date(startDate);
+      endDate.setMonth(endDate.getMonth() + planDuration);
+      
+      const calculatedEndDate = endDate.toISOString().split("T")[0];
+      
       const res = await executeAppwriteFunction({
         action: "updateUserPlan",
         targetUserId: selectedUser.$id,
@@ -119,7 +133,7 @@ export default function AdminPortal() {
           tier: planTier,
           duration: planDuration,
           startDate: planStartDate ? new Date(planStartDate).toISOString() : new Date().toISOString(),
-          endDate: planEndDate ? new Date(planEndDate).toISOString() : null,
+          endDate: calculatedEndDate ? new Date(calculatedEndDate).toISOString() : null,
           isActive: true,
           isFreeTrial: isFreeTrial,
           isLegacyUser: isLegacyUser,
@@ -732,13 +746,13 @@ export default function AdminPortal() {
                   <select
                     className="form-input form-select"
                     value={planDuration}
-                    onChange={(e) => setPlanDuration(parseInt(e.target.value) as 1 | 3 | 6 | 12)}
+                    onChange={(e) => setPlanDuration(Number(e.target.value) as 1 | 3 | 6 | 12)}
                     disabled={isLegacyUser || isFreeTrial}
                   >
-                    <option value={1}>1 Month</option>
-                    <option value={3}>3 Months (10% savings)</option>
-                    <option value={6}>6 Months (15% savings)</option>
-                    <option value={12}>12 Months (20% savings)</option>
+                    <option value="1">1 Month</option>
+                    <option value="3">3 Months (10% savings)</option>
+                    <option value="6">6 Months (15% savings)</option>
+                    <option value="12">12 Months (20% savings)</option>
                   </select>
                 </div>
 
