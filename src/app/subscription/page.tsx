@@ -1,6 +1,6 @@
 "use client";
 
-import { formatSubscriptionAmount, SUBSCRIPTION_PLANS } from "@/lib/paddle";
+import { createSubscriptionCheckout, formatSubscriptionAmount, getPlanById } from "@/lib/paddle";
 import {
   AlertCircle,
   CheckCircle,
@@ -20,6 +20,7 @@ function SubscriptionContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const [userData, setUserData] = useState<any>(null);
 
   useEffect(() => {
     if (!plan || !userId) {
@@ -28,36 +29,65 @@ function SubscriptionContent() {
       return;
     }
 
-    const planDetails = SUBSCRIPTION_PLANS.find((p) => p.id === plan);
+    const planDetails = getPlanById(plan);
     if (!planDetails) {
       setError("Invalid plan");
       setLoading(false);
       return;
     }
 
-    handleSubscribe(planDetails);
+    // Get user data from Appwrite
+    fetchUserData(userId);
   }, [plan, userId]);
 
-  const handleSubscribe = (planDetails: (typeof SUBSCRIPTION_PLANS)[0]) => {
+  const fetchUserData = async (userId: string) => {
+    try {
+      // Skip account.get() for now - use the userId directly
+      // After getting user data, create checkout
+      if (!plan) {
+        setError("Missing plan parameter");
+        setLoading(false);
+        return;
+      }
+      const planDetails = getPlanById(plan);
+      if (planDetails && userId) {
+        await handleSubscribe(planDetails, userId);
+      }
+    } catch (error) {
+      console.error("Failed to process subscription:", error);
+      setError("Failed to process subscription");
+      setLoading(false);
+    }
+  };
+
+  const handleSubscribe = async (planDetails: any, userId: string) => {
     setLoading(true);
     setError(null);
 
-    const whatsappNumber = "62887777656364";
-    const message = encodeURIComponent(
-      `Hello, I would like to subscribe to the ${planDetails.name} plan (${formatSubscriptionAmount(planDetails.amount, planDetails.currency)}/month). Please assist me with the subscription process.`,
-    );
-    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${message}`;
+    try {
+      const checkout = await createSubscriptionCheckout({
+        priceId: planDetails.priceId,
+        userId: userId,
+        tier: planDetails.tier,
+        duration: planDetails.duration,
+      });
 
-    setCheckoutUrl(whatsappUrl);
-    // Redirect to WhatsApp
-    window.location.href = whatsappUrl;
-
-    setLoading(false);
+      if (checkout.checkoutUrl) {
+        setCheckoutUrl(checkout.checkoutUrl);
+        // Redirect to Paddle checkout
+        window.location.href = checkout.checkoutUrl;
+      } else {
+        setError("Failed to create checkout");
+      }
+    } catch (error: any) {
+      console.error("Error creating checkout:", error);
+      setError(error.message || "Failed to create checkout");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const planDetails = plan
-    ? SUBSCRIPTION_PLANS.find((p) => p.id === plan)
-    : null;
+  const planDetails = plan ? getPlanById(plan) : null;
 
   if (error) {
     return (
@@ -87,18 +117,18 @@ function SubscriptionContent() {
             <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Redirecting to WhatsApp
+            Creating Checkout
           </h1>
           <p className="text-gray-600 mb-4">
-            Opening WhatsApp for {planDetails?.name} plan subscription...
+            Setting up payment for {planDetails?.name} plan...
           </p>
-          <p className="text-sm text-gray-500">Contact: 087777656364</p>
         </div>
       </div>
     );
   }
 
-  const features = [
+  const isPro = planDetails?.tier === "pro";
+  const features = isPro ? [
     {
       icon: Cloud,
       title: "Cloud Sync",
@@ -107,15 +137,14 @@ function SubscriptionContent() {
     {
       icon: Globe,
       title: "Web Management",
-      description:
-        "Manage your business from anywhere with reports & analytics",
+      description: "Manage your business from anywhere with reports & analytics",
     },
     {
       icon: Users,
       title: "Employees Management",
       description: "Manage staff roles and permissions",
     },
-  ];
+  ] : [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
@@ -138,26 +167,35 @@ function SubscriptionContent() {
                 planDetails.amount,
                 planDetails.currency,
               )}
-            <span className="text-sm font-normal text-gray-600">/month</span>
+            <span className="text-sm font-normal text-gray-600">/{planDetails?.duration || 1} months</span>
+          </p>
+          <p className="text-sm text-gray-500 mt-1">
+            {planDetails && formatSubscriptionAmount(
+              (planDetails.amount || 0) / (planDetails.duration || 1), 
+              planDetails.currency || "USD"
+            )}/month
           </p>
         </div>
 
-        <div className="bg-blue-50 rounded-lg p-4 mb-6 text-left">
-          <p className="text-sm font-semibold text-gray-700 mb-3">
-            Subscription Features:
-          </p>
-          {features.map((feature, index) => (
-            <div key={index} className="flex items-start gap-3 mb-3 last:mb-0">
-              <feature.icon className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="font-semibold text-gray-900 text-sm">
-                  {feature.title}
-                </p>
-                <p className="text-xs text-gray-600">{feature.description}</p>
+        {isPro && features.length > 0 && (
+          <div className="bg-blue-50 rounded-lg p-4 mb-6 text-left">
+            <p className="text-sm font-semibold text-gray-700 mb-3">
+              Pro Features:
+            </p>
+            {features.map((feature, index) => (
+              <div key={index} className="flex items-start gap-3 mb-3 last:mb-0">
+                <feature.icon className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-semibold text-gray-900 text-sm">
+                    {feature.title}
+                  </p>
+                  <p className="text-xs text-gray-600">{feature.description}</p>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
+        
         <p className="text-sm text-gray-500">
           If you are not redirected automatically,{" "}
           <a

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, CheckCircle } from "lucide-react";
+import { ArrowRight, CheckCircle, Cloud, Globe, Users } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
@@ -20,8 +20,7 @@ function SubscriptionSuccessContent() {
         </h1>
 
         <p className="text-gray-600 mb-8">
-          Thank you for subscribing. You now have access to all premium
-          features.
+          Thank you for subscribing. Your plan has been successfully activated.
         </p>
 
         <div className="bg-green-50 rounded-lg p-6 mb-8">
@@ -34,12 +33,16 @@ function SubscriptionSuccessContent() {
               <span>Full POS functionality</span>
             </li>
             <li className="flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-green-600" />
+              <Cloud className="w-5 h-5 text-green-600" />
               <span>Cloud sync across devices</span>
             </li>
             <li className="flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-green-600" />
+              <Globe className="w-5 h-5 text-green-600" />
               <span>Web analytics dashboard</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-green-600" />
+              <span>Employee management</span>
             </li>
             <li className="flex items-center gap-2">
               <CheckCircle className="w-5 h-5 text-green-600" />
@@ -58,7 +61,7 @@ function SubscriptionSuccessContent() {
           </a>
 
           <p className="text-sm text-gray-500">
-            Or return to the mobile app to access your subscription
+            Return to the mobile app to access your new plan features
           </p>
         </div>
       </div>

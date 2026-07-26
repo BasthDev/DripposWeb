@@ -1,12 +1,17 @@
 "use client";
 
+/**
+ * Admin panel for managing user plans and subscriptions
+ * Supports new Basic/Pro plan system with 30-day free trials
+ */
+
 import { executeAppwriteFunction } from "@/lib/appwrite";
 import {
-    CheckCircle as FiCheckCircle,
-    Shield as FiShield,
-    Star as FiStar,
-    Users as FiUsers,
-    XCircle as FiXCircle
+  CheckCircle as FiCheckCircle,
+  Shield as FiShield,
+  Star as FiStar,
+  Users as FiUsers,
+  XCircle as FiXCircle
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -24,9 +29,12 @@ export default function AdminPortal() {
 
   // Modal state
   const [selectedUser, setSelectedUser] = useState<any>(null);
-  const [isSubscribed, setIsSubscribed] = useState(false);
-  const [subMonths, setSubMonths] = useState(1);
-  const [subExpDate, setSubExpDate] = useState("");
+  const [planTier, setPlanTier] = useState<"basic" | "pro">("basic");
+  const [planDuration, setPlanDuration] = useState<1 | 3 | 6 | 12>(1);
+  const [planStartDate, setPlanStartDate] = useState("");
+  const [planEndDate, setPlanEndDate] = useState("");
+  const [isFreeTrial, setIsFreeTrial] = useState(false);
+  const [isLegacyUser, setIsLegacyUser] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -74,17 +82,29 @@ export default function AdminPortal() {
   const openManageModal = (user: any) => {
     setSelectedUser(user);
     const prefs = user.prefs || {};
-    const subs = prefs.isSubs || {};
+    const planPrefs = prefs.planPreferences || {};
+    const userPlan = planPrefs.plan || {};
+    const legacy = planPrefs.isLegacyUser || false;
 
-    setIsSubscribed(Boolean(subs.isSubscribed));
-    setSubMonths(subs.months || 1);
+    // Set plan details from new system
+    setPlanTier(userPlan.tier || "basic");
+    setPlanDuration(userPlan.duration || 1);
+    setIsFreeTrial(userPlan.isFreeTrial || false);
+    setIsLegacyUser(legacy);
 
-    if (subs.expDate) {
-      setSubExpDate(new Date(subs.expDate).toISOString().split("T")[0]);
+    // Set dates
+    if (userPlan.startDate) {
+      setPlanStartDate(new Date(userPlan.startDate).toISOString().split("T")[0]);
+    } else {
+      setPlanStartDate(new Date().toISOString().split("T")[0]);
+    }
+
+    if (userPlan.endDate) {
+      setPlanEndDate(new Date(userPlan.endDate).toISOString().split("T")[0]);
     } else {
       const d = new Date();
-      d.setMonth(d.getMonth() + 1);
-      setSubExpDate(d.toISOString().split("T")[0]);
+      d.setMonth(d.getMonth() + (userPlan.duration || 1));
+      setPlanEndDate(d.toISOString().split("T")[0]);
     }
   };
 
@@ -95,10 +115,15 @@ export default function AdminPortal() {
       const res = await executeAppwriteFunction({
         action: "updateUserPlan",
         targetUserId: selectedUser.$id,
-        isSubscribed,
-        months: subMonths,
-        startDate: new Date().toISOString(),
-        expDate: subExpDate ? new Date(subExpDate).toISOString() : null,
+        plan: {
+          tier: planTier,
+          duration: planDuration,
+          startDate: planStartDate ? new Date(planStartDate).toISOString() : new Date().toISOString(),
+          endDate: planEndDate ? new Date(planEndDate).toISOString() : null,
+          isActive: true,
+          isFreeTrial: isFreeTrial,
+          isLegacyUser: isLegacyUser,
+        },
       });
 
       if (res.success) {
@@ -118,16 +143,22 @@ export default function AdminPortal() {
     }
   };
 
-  // Stats calculation
+  // Stats calculation with new plan system
   const activeSubs = users.filter((u) => {
-    const s = u.prefs?.isSubs;
-    return s && s.isSubscribed && s.expDate && new Date(s.expDate) > new Date();
+    const plan = u.prefs?.planPreferences?.plan;
+    return plan && plan.isActive && plan.endDate && new Date(plan.endDate) > new Date();
   }).length;
   const expiredSubs = users.filter((u) => {
-    const s = u.prefs?.isSubs;
-    return (
-      s && s.isSubscribed && s.expDate && new Date(s.expDate) <= new Date()
-    );
+    const plan = u.prefs?.planPreferences?.plan;
+    return plan && !plan.isActive && plan.endDate && new Date(plan.endDate) <= new Date();
+  }).length;
+  const trialUsers = users.filter((u) => {
+    const plan = u.prefs?.planPreferences?.plan;
+    return plan && plan.isFreeTrial && plan.isActive;
+  }).length;
+  const proUsers = users.filter((u) => {
+    const plan = u.prefs?.planPreferences?.plan;
+    return plan && plan.tier === "pro" && plan.isActive;
   }).length;
 
   const filteredUsers = users.filter(
@@ -351,8 +382,44 @@ export default function AdminPortal() {
               >
                 <FiCheckCircle size={20} />
               </div>
-              <div className="stat-card-label">Active Subs</div>
+              <div className="stat-card-label">Active Plans</div>
               <div className="stat-card-value">{activeSubs}</div>
+            </div>
+
+            <div className="stat-card">
+              <div
+                className="stat-card-accent"
+                style={{ background: "var(--warning)" }}
+              />
+              <div
+                className="stat-card-icon"
+                style={{
+                  background: "var(--warning-light)",
+                  color: "var(--warning)",
+                }}
+              >
+                <FiStar size={20} />
+              </div>
+              <div className="stat-card-label">Free Trials</div>
+              <div className="stat-card-value">{trialUsers}</div>
+            </div>
+
+            <div className="stat-card">
+              <div
+                className="stat-card-accent"
+                style={{ background: "var(--success)" }}
+              />
+              <div
+                className="stat-card-icon"
+                style={{
+                  background: "var(--success-light)",
+                  color: "var(--success)",
+                }}
+              >
+                <FiShield size={20} />
+              </div>
+              <div className="stat-card-label">Pro Users</div>
+              <div className="stat-card-value">{proUsers}</div>
             </div>
 
             <div className="stat-card">
@@ -418,33 +485,51 @@ export default function AdminPortal() {
                       </td>
                     </tr>
                   ) : (
-                    filteredUsers.map((user) => {
-                      const prefs = user.prefs || {};
-                      const subs = prefs.isSubs || {};
-                      const isSub = Boolean(subs.isSubscribed);
+                    filteredUsers.map((singleUser) => {
+                      // Process user plan and display status
+                      const prefs = singleUser.prefs || {};
+                      const planPrefs = prefs.planPreferences || {};
+                      const userPlan = planPrefs.plan || {};
+                      const legacy = planPrefs.isLegacyUser || false;
 
                       let statusBadge = (
                         <span className="badge badge-gray">No Plan</span>
                       );
-                      if (isSub) {
-                        const isExpired =
-                          subs.expDate && new Date(subs.expDate) < new Date();
-                        if (isExpired) {
+                      
+                      if (legacy) {
+                        statusBadge = (
+                          <span className="badge badge-purple">Legacy</span>
+                        );
+                      } else if (userPlan.isActive) {
+                        if (userPlan.isFreeTrial) {
                           statusBadge = (
-                            <span className="badge badge-red">Expired</span>
+                            <span className="badge badge-blue">Free Trial</span>
+                          );
+                        } else if (userPlan.tier === "pro") {
+                          statusBadge = (
+                            <span className="badge badge-green">Pro Active</span>
                           );
                         } else {
                           statusBadge = (
+                            <span className="badge badge-info">Basic Active</span>
+                          );
+                        }
+                      } else if (userPlan.endDate && new Date(userPlan.endDate) < new Date()) {
+                        statusBadge = (
+                          <span className="badge badge-red">Expired</span>
+                        );
+                      } else {
+                        statusBadge = (
                             <span className="badge badge-green">Active</span>
                           );
                         }
-                      }
+                      
 
                       return (
-                        <tr key={user.$id}>
+                        <tr key={singleUser.$id}>
                           <td>
                             <div className="td-name">
-                              {user.name || "Unnamed User"}
+                              {singleUser.name || "Unnamed User"}
                             </div>
                             <div
                               style={{
@@ -452,14 +537,14 @@ export default function AdminPortal() {
                                 color: "var(--text-muted)",
                               }}
                             >
-                              {user.email}
+                              {singleUser.email}
                             </div>
                           </td>
                           <td>
-                            <span className="td-mono">{user.$id}</span>
+                            <span className="td-mono">{singleUser.$id}</span>
                           </td>
                           <td>
-                            {user.status ? (
+                            {singleUser.status ? (
                               <span className="badge badge-blue">Verified</span>
                             ) : (
                               <span className="badge badge-gray">
@@ -476,15 +561,15 @@ export default function AdminPortal() {
                               }}
                             >
                               {statusBadge}
-                              {isSub && subs.expDate && (
+                              {userPlan.endDate && (
                                 <span
                                   style={{
                                     fontSize: 12,
                                     color: "var(--text-muted)",
                                   }}
                                 >
-                                  Expires:{" "}
-                                  {new Date(subs.expDate).toLocaleDateString()}
+                                  {userPlan.isActive ? "Expires: " : "Expired: "}
+                                  {new Date(userPlan.endDate).toLocaleDateString()}
                                 </span>
                               )}
                             </div>
@@ -492,7 +577,7 @@ export default function AdminPortal() {
                           <td style={{ textAlign: "right" }}>
                             <button
                               className="btn btn-secondary btn-sm"
-                              onClick={() => openManageModal(user)}
+                              onClick={() => openManageModal(singleUser)}
                             >
                               Manage Plan
                             </button>
@@ -577,9 +662,9 @@ export default function AdminPortal() {
               >
                 <input
                   type="checkbox"
-                  id="isSub"
-                  checked={isSubscribed}
-                  onChange={(e) => setIsSubscribed(e.target.checked)}
+                  id="isLegacy"
+                  checked={isLegacyUser}
+                  onChange={(e) => setIsLegacyUser(e.target.checked)}
                   style={{
                     width: 18,
                     height: 18,
@@ -587,49 +672,98 @@ export default function AdminPortal() {
                   }}
                 />
                 <label
-                  htmlFor="isSub"
+                  htmlFor="isLegacy"
                   style={{ fontWeight: 600, fontSize: 14, cursor: "pointer" }}
                 >
-                  Enable Subscription Plan
+                  Legacy User (Grandfathered)
+                </label>
+              </div>
+
+              <div
+                className="form-group"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  paddingBottom: 16,
+                  borderBottom: "1px solid var(--border)",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  id="isTrial"
+                  checked={isFreeTrial}
+                  onChange={(e) => setIsFreeTrial(e.target.checked)}
+                  style={{
+                    width: 18,
+                    height: 18,
+                    accentColor: "var(--primary)",
+                  }}
+                />
+                <label
+                  htmlFor="isTrial"
+                  style={{ fontWeight: 600, fontSize: 14, cursor: "pointer" }}
+                >
+                  Free Trial (30 days)
                 </label>
               </div>
 
               <div
                 style={{
-                  opacity: isSubscribed ? 1 : 0.5,
-                  pointerEvents: isSubscribed ? "auto" : "none",
+                  opacity: isLegacyUser ? 0.5 : 1,
+                  pointerEvents: isLegacyUser ? "none" : "auto",
                 }}
               >
+                <div className="form-group" style={{ marginTop: 16 }}>
+                  <label className="form-label">Plan Tier</label>
+                  <select
+                    className="form-input form-select"
+                    value={planTier}
+                    onChange={(e) => setPlanTier(e.target.value as "basic" | "pro")}
+                    disabled={isLegacyUser}
+                  >
+                    <option value="basic">Basic (Offline Only)</option>
+                    <option value="pro">Pro (Full Features)</option>
+                  </select>
+                </div>
+
                 <div className="form-group" style={{ marginTop: 16 }}>
                   <label className="form-label">Duration (Months)</label>
                   <select
                     className="form-input form-select"
-                    value={subMonths}
-                    onChange={(e) => {
-                      const m = parseInt(e.target.value);
-                      setSubMonths(m);
-                      const d = new Date();
-                      d.setMonth(d.getMonth() + m);
-                      setSubExpDate(d.toISOString().split("T")[0]);
-                    }}
+                    value={planDuration}
+                    onChange={(e) => setPlanDuration(parseInt(e.target.value) as 1 | 3 | 6 | 12)}
+                    disabled={isLegacyUser || isFreeTrial}
                   >
                     <option value={1}>1 Month</option>
-                    <option value={3}>3 Months</option>
-                    <option value={6}>6 Months</option>
-                    <option value={12}>12 Months (1 Year)</option>
+                    <option value={3}>3 Months (10% savings)</option>
+                    <option value={6}>6 Months (15% savings)</option>
+                    <option value={12}>12 Months (20% savings)</option>
                   </select>
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Expiry Date</label>
+                  <label className="form-label">Start Date</label>
                   <input
                     type="date"
                     className="form-input"
-                    value={subExpDate}
-                    onChange={(e) => setSubExpDate(e.target.value)}
+                    value={planStartDate}
+                    onChange={(e) => setPlanStartDate(e.target.value)}
+                    disabled={isLegacyUser}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">End Date</label>
+                  <input
+                    type="date"
+                    className="form-input"
+                    value={planEndDate}
+                    onChange={(e) => setPlanEndDate(e.target.value)}
+                    disabled={isLegacyUser}
                   />
                   <div className="form-hint">
-                    Users lose access to syncing after this date.
+                    Users lose access to Pro features after this date.
                   </div>
                 </div>
               </div>
