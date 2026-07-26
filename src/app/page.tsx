@@ -160,6 +160,7 @@ interface RecipeIngredient {
   unit?: string;
   ingredient_name?: string;
   item_unit?: string | null;
+  cost_per_gram?: number | null;
 }
 interface RecipeExtra {
   uuid: string;
@@ -231,6 +232,12 @@ function normaliseQty(qty: number, unit: string): number {
   if (unit === "kg") return qty * 1000; // → grams
   if (unit === "l") return qty * 1000; // → ml
   return qty; // g, ml, pcs unchanged
+}
+
+function getDisplayUnit(unit: string | null): string {
+  if (!unit) return "g";
+  // Convert to smaller unit for display (same logic as mobile app)
+  return unit === "kg" ? "g" : unit === "l" ? "ml" : unit;
 }
 
 function formatCostPerUnit(ingredient: Ingredient): string {
@@ -826,14 +833,20 @@ export default function App() {
           <div className="login-glass-card slide-up">
             <div className="login-header">
               <div className="login-logo-circle">
-                <Zap size={32} strokeWidth={2.5} color="#fff" />
+                <img
+                  src="/DP-Logo.png"
+                  alt="Drip POS Logo"
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "contain",
+                  }}
+                />
               </div>
               <h1 className="login-title">
                 Drip<span style={{ color: "var(--primary)" }}>POS</span>
               </h1>
-              <p className="login-subtitle">
-                Owner Management Portal
-              </p>
+              <p className="login-subtitle">Owner Management Portal</p>
             </div>
             {authErr && (
               <div className="auth-error-alert">
@@ -1092,7 +1105,11 @@ function Dashboard({
         <aside className="sidebar">
           <div className="sidebar-brand">
             <div className="sidebar-logo">
-              <Zap size={20} color="#fff" />
+              <img
+                src="/DP-Logo.png"
+                alt="Drip POS Logo"
+                style={{ width: "100%", height: "100%", objectFit: "contain" }}
+              />
             </div>
             <div>
               <div className="brand-name">Drip POS</div>
@@ -3289,7 +3306,7 @@ const InvTab = memo(function InvTab({
                   >
                     {i.current_stock}
                   </td>
-                  <td>{i.item_unit ?? "—"}</td>
+                  <td>{getDisplayUnit(i.item_unit)}</td>
                   <td style={{ fontWeight: 600, color: "var(--primary-dark)" }}>
                     {formatCostPerUnit(i)}
                   </td>
@@ -5389,6 +5406,7 @@ const ProductsTab = memo(function ProductsTab({
         <ProductFormModal
           product={form === "new" ? null : form}
           categories={categories}
+          recipes={recipes}
           onSave={doSave}
           onClose={() => setForm(null)}
           saving={saving}
@@ -5639,12 +5657,14 @@ const AccountTab = memo(function AccountTab({
 const ProductFormModal = memo(function ProductFormModal({
   product,
   categories,
+  recipes,
   onSave,
   onClose,
   saving,
 }: {
   product: Product | null;
   categories: Category[];
+  recipes: Recipe[];
   onSave: (d: Partial<Product> & { imageFile?: File }) => void;
   onClose: () => void;
   saving: boolean;
@@ -5654,10 +5674,41 @@ const ProductFormModal = memo(function ProductFormModal({
   const [categoryId, setCategoryId] = useState(product?.category_id ?? "");
   const [sellPrice, setSellPrice] = useState(String(product?.sell_price ?? ""));
   const [buyPrice, setBuyPrice] = useState(String(product?.buy_price ?? ""));
+  const [recipeId, setRecipeId] = useState(product?.recipe_id ?? "");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(
     product?.image_uri ?? null,
   );
+
+  // Auto-calculate buy price when recipe is selected
+  const handleRecipeChange = (newRecipeId: string) => {
+    setRecipeId(newRecipeId);
+    if (newRecipeId) {
+      const recipe = recipes.find((r) => r.uuid === newRecipeId);
+      if (recipe) {
+        // Calculate HPP from recipe ingredients and extras
+        const ingredientCost =
+          recipe.ingredients?.reduce((sum, ri) => {
+            const cpg = ri.cost_per_gram ?? 0;
+            return sum + cpg * ri.qty_used;
+          }, 0) ?? 0;
+
+        const extrasFlat =
+          recipe.extras
+            ?.filter((e) => e.value_type === "flat")
+            .reduce((sum, e) => sum + e.value, 0) ?? 0;
+
+        const extrasPercent =
+          recipe.extras
+            ?.filter((e) => e.value_type === "percentage")
+            .reduce((sum, e) => sum + ingredientCost * (e.value / 100), 0) ?? 0;
+
+        const hpp =
+          Math.round((ingredientCost + extrasFlat + extrasPercent) * 100) / 100;
+        setBuyPrice(String(hpp));
+      }
+    }
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -5781,6 +5832,24 @@ const ProductFormModal = memo(function ProductFormModal({
               </select>
             </div>
           </div>
+          <div className="form-group">
+            <label className="form-label">Recipe (Optional)</label>
+            <select
+              className="form-input form-select"
+              value={recipeId}
+              onChange={(e) => handleRecipeChange(e.target.value)}
+            >
+              <option value="">No recipe</option>
+              {recipes.map((r) => (
+                <option key={r.uuid} value={r.uuid}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
+            <div className="form-hint">
+              Selecting a recipe will auto-calculate the buy price (HPP)
+            </div>
+          </div>
           <div className="g2">
             <div className="form-group">
               <label className="form-label">Sell Price (Rp) *</label>
@@ -5835,6 +5904,7 @@ const ProductFormModal = memo(function ProductFormModal({
                 category_id: categoryId || null,
                 sell_price: parseFloat(sellPrice) || 0,
                 buy_price: parseFloat(buyPrice) || null,
+                recipe_id: recipeId || null,
                 imageFile: imageFile || undefined,
                 image_uri: imagePreview || null,
               })
@@ -6358,10 +6428,7 @@ const SuppliersTab = memo(function SuppliersTab({
                       {s.contact || "—"}
                     </td>
                     <td style={{ textAlign: "right" }}>
-                      <button
-                        className="btn-icon"
-                        onClick={() => openEdit(s)}
-                      >
+                      <button className="btn-icon" onClick={() => openEdit(s)}>
                         <Pencil size={14} />
                       </button>
                       <button
@@ -6380,7 +6447,10 @@ const SuppliersTab = memo(function SuppliersTab({
       </div>
 
       {isModalOpen && (
-        <div className="modal-overlay" onClick={() => !saving && setIsModalOpen(false)}>
+        <div
+          className="modal-overlay"
+          onClick={() => !saving && setIsModalOpen(false)}
+        >
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <span className="modal-title">

@@ -5,6 +5,9 @@ export const metadata: Metadata = {
   title: "Drip POS — Management Dashboard",
   description:
     "Owner-only management dashboard for Drip POS — reports, inventory, employees, and recipes.",
+  icons: {
+    icon: "/DP-Logo.png",
+  },
 };
 
 export default function RootLayout({
