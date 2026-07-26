@@ -6366,7 +6366,7 @@ const SubscribeTab = memo(function SubscribeTab({
                   >
                     <img
                       src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(
-                        `https://wa.me/62887777656364?text=${encodeURIComponent(
+                        `https://wa.me/6287777656364?text=${encodeURIComponent(
                           `Hello, I would like to subscribe to the ${selectedPlan.name} plan (${selectedPlan.price}/${selectedPlan.months} months). User ID: ${user.$id}`,
                         )}`,
                       )}`}
@@ -6375,7 +6375,7 @@ const SubscribeTab = memo(function SubscribeTab({
                     />
                   </div>
                   <a
-                    href={`https://wa.me/62887777656364?text=${encodeURIComponent(
+                    href={`https://wa.me/6287777656364?text=${encodeURIComponent(
                       `Hello, I would like to subscribe to the ${selectedPlan.name} plan (${selectedPlan.price}/${selectedPlan.months} months). User ID: ${user.$id}`,
                     )}`}
                     target="_blank"
