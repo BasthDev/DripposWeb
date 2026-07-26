@@ -1,11 +1,14 @@
 "use client";
 
+import { formatSubscriptionAmount, SUBSCRIPTION_PLANS } from "@/lib/paddle";
 import {
-  createSubscriptionCheckout,
-  formatSubscriptionAmount,
-  SUBSCRIPTION_PLANS,
-} from "@/lib/paddle";
-import { AlertCircle, CheckCircle, Loader2 } from "lucide-react";
+  AlertCircle,
+  CheckCircle,
+  Cloud,
+  Globe,
+  Loader2,
+  Users,
+} from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
@@ -35,33 +38,21 @@ function SubscriptionContent() {
     handleSubscribe(planDetails);
   }, [plan, userId]);
 
-  const handleSubscribe = async (
-    planDetails: (typeof SUBSCRIPTION_PLANS)[0],
-  ) => {
+  const handleSubscribe = (planDetails: (typeof SUBSCRIPTION_PLANS)[0]) => {
     setLoading(true);
     setError(null);
 
-    try {
-      const result = await createSubscriptionCheckout({
-        priceId: planDetails.priceId,
-        userId: userId || undefined,
-        tier: planDetails.tier,
-      });
+    const whatsappNumber = "62887777656364";
+    const message = encodeURIComponent(
+      `Hello, I would like to subscribe to the ${planDetails.name} plan (${formatSubscriptionAmount(planDetails.amount, planDetails.currency)}/month). Please assist me with the subscription process.`,
+    );
+    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${message}`;
 
-      if (result.checkoutUrl) {
-        setCheckoutUrl(result.checkoutUrl);
-        // Redirect to Paddle checkout
-        window.location.href = result.checkoutUrl;
-      } else {
-        setError("Failed to create checkout");
-      }
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to create checkout",
-      );
-    } finally {
-      setLoading(false);
-    }
+    setCheckoutUrl(whatsappUrl);
+    // Redirect to WhatsApp
+    window.location.href = whatsappUrl;
+
+    setLoading(false);
   };
 
   const planDetails = plan
@@ -96,18 +87,35 @@ function SubscriptionContent() {
             <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Creating Checkout
+            Redirecting to WhatsApp
           </h1>
           <p className="text-gray-600 mb-4">
-            Setting up your subscription for {planDetails?.name} plan...
+            Opening WhatsApp for {planDetails?.name} plan subscription...
           </p>
-          <p className="text-sm text-gray-500">
-            You will be redirected to Paddle payment page
-          </p>
+          <p className="text-sm text-gray-500">Contact: 087777656364</p>
         </div>
       </div>
     );
   }
+
+  const features = [
+    {
+      icon: Cloud,
+      title: "Cloud Sync",
+      description: "Sync your data across devices securely",
+    },
+    {
+      icon: Globe,
+      title: "Web Management",
+      description:
+        "Manage your business from anywhere with reports & analytics",
+    },
+    {
+      icon: Users,
+      title: "Employees Management",
+      description: "Manage staff roles and permissions",
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
@@ -132,6 +140,23 @@ function SubscriptionContent() {
               )}
             <span className="text-sm font-normal text-gray-600">/month</span>
           </p>
+        </div>
+
+        <div className="bg-blue-50 rounded-lg p-4 mb-6 text-left">
+          <p className="text-sm font-semibold text-gray-700 mb-3">
+            Subscription Features:
+          </p>
+          {features.map((feature, index) => (
+            <div key={index} className="flex items-start gap-3 mb-3 last:mb-0">
+              <feature.icon className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-semibold text-gray-900 text-sm">
+                  {feature.title}
+                </p>
+                <p className="text-xs text-gray-600">{feature.description}</p>
+              </div>
+            </div>
+          ))}
         </div>
         <p className="text-sm text-gray-500">
           If you are not redirected automatically,{" "}
