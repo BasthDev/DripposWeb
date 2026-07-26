@@ -6052,27 +6052,45 @@ const SubscribeTab = memo(function SubscribeTab({
   const PLANS = [
     {
       id: "basic",
-      name: "Basic",
+      name: "1 Month",
       price: "Rp 150.000",
       months: 1,
       desc: "Perfect for small shops",
       color: "var(--info)",
+      features: [
+        "Cloud Sync",
+        "Web Management",
+        "Reports & Analytics",
+        "Employees Management",
+      ],
     },
     {
       id: "pro",
-      name: "Pro",
+      name: "3 Months",
       price: "Rp 400.000",
       months: 3,
       desc: "For growing businesses",
       color: "var(--primary)",
+      features: [
+        "Cloud Sync",
+        "Web Management",
+        "Reports & Analytics",
+        "Employees Management",
+      ],
     },
     {
       id: "enterprise",
-      name: "Enterprise",
+      name: "12 Months",
       price: "Rp 1.500.000",
       months: 12,
       desc: "Full power for large stores",
       color: "var(--purple)",
+      features: [
+        "Cloud Sync",
+        "Web Management",
+        "Reports & Analytics",
+        "Employees Management",
+      ],
     },
   ];
 
@@ -6214,6 +6232,34 @@ const SubscribeTab = memo(function SubscribeTab({
                 / {plan.months} mo
               </span>
             </div>
+            <div style={{ marginTop: 16 }}>
+              <ul
+                style={{
+                  listStyle: "none",
+                  padding: 0,
+                  margin: 0,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
+                }}
+              >
+                {plan.features.map((feature, idx) => (
+                  <li
+                    key={idx}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      fontSize: "0.8125rem",
+                      color: "var(--text-2)",
+                    }}
+                  >
+                    <CheckCircle2 size={14} style={{ color: plan.color }} />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+            </div>
             <button
               className="btn btn-primary"
               style={{
@@ -6240,10 +6286,10 @@ const SubscribeTab = memo(function SubscribeTab({
           <div
             className="modal"
             onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: 400 }}
+            style={{ maxWidth: 450 }}
           >
             <div className="modal-header">
-              <span className="modal-title">Payment Gateway</span>
+              <span className="modal-title">Order via WhatsApp</span>
               <button
                 className="btn btn-ghost btn-icon btn-sm"
                 onClick={() => !loading && setSelectedPlan(null)}
@@ -6254,15 +6300,15 @@ const SubscribeTab = memo(function SubscribeTab({
             </div>
             <div
               className="modal-body"
-              style={{ textAlign: "center", padding: "40px 24px" }}
+              style={{ textAlign: "center", padding: "32px 24px" }}
             >
               <div
                 style={{
                   width: 64,
                   height: 64,
                   borderRadius: 16,
-                  background: "var(--primary-xlight)",
-                  color: "var(--primary)",
+                  background: "#25D366",
+                  color: "#fff",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -6272,26 +6318,94 @@ const SubscribeTab = memo(function SubscribeTab({
                 <CreditCard size={32} />
               </div>
               <h3 style={{ fontSize: "1.25rem", fontWeight: 800 }}>
-                Mock Payment
+                {selectedPlan.name} Plan
               </h3>
               <p
                 style={{
                   color: "var(--text-3)",
                   fontSize: "0.875rem",
-                  margin: "8px 0 24px",
+                  marginBottom: 24,
                 }}
               >
-                You are purchasing the <b>{selectedPlan.name}</b> plan for{" "}
-                <b>{selectedPlan.price}</b>.
+                {selectedPlan.price} / {selectedPlan.months} months
               </p>
-              <button
-                className={`btn btn-primary btn-lg${loading ? " btn-spin" : ""}`}
-                style={{ width: "100%", justifyContent: "center" }}
-                onClick={handlePay}
-                disabled={loading}
+
+              <div
+                style={{
+                  background: "var(--surface-2)",
+                  borderRadius: "var(--radius)",
+                  padding: 24,
+                  marginBottom: 24,
+                }}
               >
-                {!loading && "Confirm Payment"}
-              </button>
+                <p
+                  style={{
+                    fontSize: "0.8125rem",
+                    fontWeight: 600,
+                    marginBottom: 16,
+                    color: "var(--text)",
+                  }}
+                >
+                  Scan QR Code or Tap Link
+                </p>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: 16,
+                  }}
+                >
+                  <div
+                    style={{
+                      background: "#fff",
+                      padding: 16,
+                      borderRadius: 12,
+                      border: "1px solid var(--border)",
+                    }}
+                  >
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(
+                        `https://wa.me/62887777656364?text=${encodeURIComponent(
+                          `Hello, I would like to subscribe to the ${selectedPlan.name} plan (${selectedPlan.price}/${selectedPlan.months} months). User ID: ${user.$id}`,
+                        )}`,
+                      )}`}
+                      alt="WhatsApp QR"
+                      style={{ width: 150, height: 150 }}
+                    />
+                  </div>
+                  <a
+                    href={`https://wa.me/62887777656364?text=${encodeURIComponent(
+                      `Hello, I would like to subscribe to the ${selectedPlan.name} plan (${selectedPlan.price}/${selectedPlan.months} months). User ID: ${user.$id}`,
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-primary"
+                    style={{
+                      width: "100%",
+                      justifyContent: "center",
+                      background: "#25D366",
+                      color: "#fff",
+                      textDecoration: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    <span>Open WhatsApp</span>
+                  </a>
+                </div>
+              </div>
+
+              <p
+                style={{
+                  fontSize: "0.75rem",
+                  color: "var(--text-3)",
+                  lineHeight: 1.5,
+                }}
+              >
+                Contact: 087777656364
+              </p>
             </div>
           </div>
         </div>
