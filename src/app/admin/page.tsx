@@ -30,7 +30,7 @@ export default function AdminPortal() {
   // Modal state
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [planTier, setPlanTier] = useState<"basic" | "pro">("basic");
-  const [planDuration, setPlanDuration] = useState<1 | 3 | 6 | 12>(1);
+  const [planDuration, setPlanDuration] = useState<1 | 3 | 6 | 12 | 999>(1);
   const [planStartDate, setPlanStartDate] = useState("");
   const [planEndDate, setPlanEndDate] = useState("");
   const [isFreeTrial, setIsFreeTrial] = useState(false);
@@ -47,11 +47,14 @@ export default function AdminPortal() {
 
   // Auto-calculate end date when duration or start date changes
   useEffect(() => {
-    if (planStartDate && planDuration) {
+    if (planStartDate && planDuration && planDuration !== 999) {
       const startDate = new Date(planStartDate);
       const endDate = new Date(startDate);
       endDate.setMonth(endDate.getMonth() + planDuration);
       setPlanEndDate(endDate.toISOString().split("T")[0]);
+    } else if (planDuration === 999) {
+      // Lifetime plan - no end date
+      setPlanEndDate("");
     }
   }, [planDuration, planStartDate]);
 
@@ -102,6 +105,12 @@ export default function AdminPortal() {
     setIsFreeTrial(userPlan.isFreeTrial || false);
     setIsLegacyUser(legacy);
 
+    // For legacy users, force Basic tier and lifetime duration
+    if (legacy) {
+      setPlanTier("basic");
+      setPlanDuration(999);
+    }
+
     // Set start date
     if (userPlan.startDate) {
       setPlanStartDate(new Date(userPlan.startDate).toISOString().split("T")[0]);
@@ -110,8 +119,10 @@ export default function AdminPortal() {
     }
 
     // Set end date (will be auto-calculated by useEffect)
-    if (userPlan.endDate) {
+    if (userPlan.endDate && !userPlan.isLifetime) {
       setPlanEndDate(new Date(userPlan.endDate).toISOString().split("T")[0]);
+    } else if (userPlan.isLifetime) {
+      setPlanEndDate("");
     }
   };
 
@@ -119,24 +130,31 @@ export default function AdminPortal() {
     if (!selectedUser) return;
     setSaving(true);
     try {
-      // Ensure end date is calculated based on duration and start date
-      const startDate = planStartDate ? new Date(planStartDate) : new Date();
-      const endDate = new Date(startDate);
-      endDate.setMonth(endDate.getMonth() + planDuration);
-      
-      const calculatedEndDate = endDate.toISOString().split("T")[0];
-      
+      // For legacy users, force Basic tier and lifetime duration
+      const finalTier = isLegacyUser ? "basic" : planTier;
+      const finalDuration = isLegacyUser ? 999 : planDuration;
+
+      // Calculate end date only for non-lifetime plans
+      let calculatedEndDate = null;
+      if (finalDuration !== 999) {
+        const startDate = planStartDate ? new Date(planStartDate) : new Date();
+        const endDate = new Date(startDate);
+        endDate.setMonth(endDate.getMonth() + finalDuration);
+        calculatedEndDate = endDate.toISOString();
+      }
+
       const res = await executeAppwriteFunction({
         action: "updateUserPlan",
         targetUserId: selectedUser.$id,
         plan: {
-          tier: planTier,
-          duration: planDuration,
+          tier: finalTier,
+          duration: finalDuration,
           startDate: planStartDate ? new Date(planStartDate).toISOString() : new Date().toISOString(),
-          endDate: calculatedEndDate ? new Date(calculatedEndDate).toISOString() : null,
+          endDate: calculatedEndDate,
           isActive: true,
-          isFreeTrial: isFreeTrial,
+          isFreeTrial: isLegacyUser ? false : isFreeTrial, // Legacy users can't be on trial
           isLegacyUser: isLegacyUser,
+          isLifetime: isLegacyUser, // Mark legacy users as lifetime
         },
       });
 
@@ -512,7 +530,7 @@ export default function AdminPortal() {
                       
                       if (legacy) {
                         statusBadge = (
-                          <span className="badge badge-purple">Legacy</span>
+                          <span className="badge badge-purple">Legacy (Lifetime)</span>
                         );
                       } else if (userPlan.isActive) {
                         if (userPlan.isFreeTrial) {
@@ -575,7 +593,16 @@ export default function AdminPortal() {
                               }}
                             >
                               {statusBadge}
-                              {userPlan.endDate && (
+                              {userPlan.isLifetime ? (
+                                <span
+                                  style={{
+                                    fontSize: 12,
+                                    color: "var(--text-muted)",
+                                  }}
+                                >
+                                  Lifetime Access
+                                </span>
+                              ) : userPlan.endDate ? (
                                 <span
                                   style={{
                                     fontSize: 12,
@@ -585,7 +612,7 @@ export default function AdminPortal() {
                                   {userPlan.isActive ? "Expires: " : "Expired: "}
                                   {new Date(userPlan.endDate).toLocaleDateString()}
                                 </span>
-                              )}
+                              ) : null}
                             </div>
                           </td>
                           <td style={{ textAlign: "right" }}>
@@ -746,13 +773,14 @@ export default function AdminPortal() {
                   <select
                     className="form-input form-select"
                     value={planDuration}
-                    onChange={(e) => setPlanDuration(Number(e.target.value) as 1 | 3 | 6 | 12)}
+                    onChange={(e) => setPlanDuration(Number(e.target.value) as 1 | 3 | 6 | 12 | 999)}
                     disabled={isLegacyUser || isFreeTrial}
                   >
                     <option value="1">1 Month</option>
                     <option value="3">3 Months (10% savings)</option>
                     <option value="6">6 Months (15% savings)</option>
                     <option value="12">12 Months (20% savings)</option>
+                    <option value="999">Lifetime (Legacy Users Only)</option>
                   </select>
                 </div>
 
