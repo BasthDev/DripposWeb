@@ -175,6 +175,68 @@ export default function AdminPortal() {
     }
   };
 
+  const setLifetimeAccess = async (user: any) => {
+    if (!confirm(`Grant LIFETIME access to ${user.name} (${user.email})?\n\nThis will mark them as a Legacy/Lifetime user. They will have permanent basic tier access. You can clear this later.`)) return;
+    setSaving(true);
+    try {
+      const res = await executeAppwriteFunction({
+        action: "updateUserPlan",
+        targetUserId: user.$id,
+        plan: {
+          tier: "basic",
+          duration: 999,
+          startDate: new Date().toISOString(),
+          endDate: null,
+          isActive: true,
+          isFreeTrial: false,
+          isLegacyUser: true,
+          isLifetime: true,
+        },
+      });
+      if (res.success) {
+        setUsers(users.map((u) => u.$id === user.$id ? { ...u, prefs: res.prefs } : u));
+        alert(`✅ ${user.name} has been granted Lifetime access.`);
+      } else {
+        alert("Failed: " + res.error);
+      }
+    } catch (err: any) {
+      alert("Error: " + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const clearLifetimeAccess = async (user: any) => {
+    if (!confirm(`⚠️ REMOVE lifetime access from ${user.name} (${user.email})?\n\nThis will revoke their legacy/lifetime status. They will need a paid subscription to continue using the app.`)) return;
+    setSaving(true);
+    try {
+      const res = await executeAppwriteFunction({
+        action: "updateUserPlan",
+        targetUserId: user.$id,
+        plan: {
+          tier: "basic",
+          duration: 1,
+          startDate: new Date().toISOString(),
+          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          isActive: true,
+          isFreeTrial: false,
+          isLegacyUser: false,
+          isLifetime: false,
+        },
+      });
+      if (res.success) {
+        setUsers(users.map((u) => u.$id === user.$id ? { ...u, prefs: res.prefs } : u));
+        alert(`✅ Lifetime access removed from ${user.name}.`);
+      } else {
+        alert("Failed: " + res.error);
+      }
+    } catch (err: any) {
+      alert("Error: " + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // Stats calculation with new plan system
   const activeSubs = users.filter((u) => {
     const plan = u.prefs?.planPreferences?.plan;
@@ -191,6 +253,10 @@ export default function AdminPortal() {
   const proUsers = users.filter((u) => {
     const plan = u.prefs?.planPreferences?.plan;
     return plan && plan.tier === "pro" && plan.isActive;
+  }).length;
+  const lifetimeUsers = users.filter((u) => {
+    const prefs = u.prefs?.planPreferences;
+    return prefs?.isLegacyUser === true || prefs?.plan?.isLifetime === true;
   }).length;
 
   const filteredUsers = users.filter(
@@ -471,6 +537,24 @@ export default function AdminPortal() {
               <div className="stat-card-label">Expired Subs</div>
               <div className="stat-card-value">{expiredSubs}</div>
             </div>
+
+            <div className="stat-card">
+              <div
+                className="stat-card-accent"
+                style={{ background: "#7C3AED" }}
+              />
+              <div
+                className="stat-card-icon"
+                style={{
+                  background: "#EDE9FE",
+                  color: "#7C3AED",
+                }}
+              >
+                <FiShield size={20} />
+              </div>
+              <div className="stat-card-label">Lifetime Users</div>
+              <div className="stat-card-value">{lifetimeUsers}</div>
+            </div>
           </div>
 
           {/* Filter Bar */}
@@ -616,12 +700,36 @@ export default function AdminPortal() {
                             </div>
                           </td>
                           <td style={{ textAlign: "right" }}>
-                            <button
-                              className="btn btn-secondary btn-sm"
-                              onClick={() => openManageModal(singleUser)}
-                            >
-                              Manage Plan
-                            </button>
+                            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", alignItems: "center" }}>
+                              {(singleUser.prefs?.planPreferences?.isLegacyUser || singleUser.prefs?.planPreferences?.plan?.isLifetime) ? (
+                                <>
+                                  <span style={{ fontSize: 11, fontWeight: 700, color: "#7C3AED", background: "#EDE9FE", borderRadius: 6, padding: "3px 8px" }}>♾️ LIFETIME</span>
+                                  <button
+                                    className="btn btn-secondary btn-sm"
+                                    style={{ borderColor: "var(--danger)", color: "var(--danger)" }}
+                                    onClick={() => clearLifetimeAccess(singleUser)}
+                                    disabled={saving}
+                                  >
+                                    Clear Lifetime
+                                  </button>
+                                </>
+                              ) : (
+                                <button
+                                  className="btn btn-secondary btn-sm"
+                                  style={{ borderColor: "#7C3AED", color: "#7C3AED" }}
+                                  onClick={() => setLifetimeAccess(singleUser)}
+                                  disabled={saving}
+                                >
+                                  ♾️ Set Lifetime
+                                </button>
+                              )}
+                              <button
+                                className="btn btn-secondary btn-sm"
+                                onClick={() => openManageModal(singleUser)}
+                              >
+                                Manage Plan
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -691,34 +799,45 @@ export default function AdminPortal() {
                 </div>
               </div>
 
-              <div
-                className="form-group"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  paddingBottom: 16,
-                  borderBottom: "1px solid var(--border)",
-                }}
-              >
-                <input
-                  type="checkbox"
-                  id="isLegacy"
-                  checked={isLegacyUser}
-                  onChange={(e) => setIsLegacyUser(e.target.checked)}
+              {/* Legacy / Lifetime Status — read-only in modal, managed via table buttons */}
+              {isLegacyUser ? (
+                <div
                   style={{
-                    width: 18,
-                    height: 18,
-                    accentColor: "var(--primary)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "12px 16px",
+                    marginBottom: 8,
+                    background: "#EDE9FE",
+                    borderRadius: 10,
+                    border: "1.5px solid #7C3AED",
                   }}
-                />
-                <label
-                  htmlFor="isLegacy"
-                  style={{ fontWeight: 600, fontSize: 14, cursor: "pointer" }}
                 >
-                  Legacy User (Grandfathered)
-                </label>
-              </div>
+                  <span style={{ fontSize: 20 }}>♾️</span>
+                  <div>
+                    <div style={{ fontWeight: 700, color: "#7C3AED", fontSize: 14 }}>Lifetime / Legacy Access ACTIVE</div>
+                    <div style={{ fontSize: 12, color: "#6D28D9", marginTop: 2 }}>This user has permanent access. Use the &ldquo;Clear Lifetime&rdquo; button in the user table to revoke.</div>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "12px 16px",
+                    marginBottom: 8,
+                    background: "var(--surface-2)",
+                    borderRadius: 10,
+                    border: "1px solid var(--border)",
+                    color: "var(--text-muted)",
+                    fontSize: 13,
+                  }}
+                >
+                  <FiShield size={16} />
+                  <span>Not a lifetime user. Use the <strong>♾️ Set Lifetime</strong> button in the table to grant lifetime access.</span>
+                </div>
+              )}
 
               <div
                 className="form-group"
