@@ -2,6 +2,172 @@ import { ArrowRight, BarChart2, CheckCircle2, CreditCard, Lock, Printer, Shield,
 import Link from "next/link";
 import React from "react";
 
+// Plan configurations matching mobile app
+const PLAN_CONFIGS = [
+  // Basic Plans - Offline only
+  {
+    id: "basic_1month",
+    tier: "basic",
+    name: "Basic - 1 Month",
+    description: "Offline only",
+    duration: 1,
+    price: 3.5,
+    currency: "USD",
+    features: [
+      "Full POS functionality",
+      "Offline mode",
+      "Local data storage",
+      "Basic reporting",
+    ],
+  },
+  {
+    id: "basic_3month",
+    tier: "basic",
+    name: "Basic - 3 Months",
+    description: "Offline only (Save 10%)",
+    duration: 3,
+    price: 9.45,
+    currency: "USD",
+    features: [
+      "Full POS functionality",
+      "Offline mode",
+      "Local data storage",
+      "Basic reporting",
+    ],
+  },
+  {
+    id: "basic_6month",
+    tier: "basic",
+    name: "Basic - 6 Months",
+    description: "Offline only (Save 15%)",
+    duration: 6,
+    price: 17.85,
+    currency: "USD",
+    features: [
+      "Full POS functionality",
+      "Offline mode",
+      "Local data storage",
+      "Basic reporting",
+    ],
+  },
+  {
+    id: "basic_12month",
+    tier: "basic",
+    name: "Basic - 12 Months",
+    description: "Offline only (Save 20%)",
+    duration: 12,
+    price: 33.6,
+    currency: "USD",
+    features: [
+      "Full POS functionality",
+      "Offline mode",
+      "Local data storage",
+      "Basic reporting",
+    ],
+  },
+  // Pro Plans - Full features
+  {
+    id: "pro_1month",
+    tier: "pro",
+    name: "Pro - 1 Month",
+    description: "Full features with sync",
+    duration: 1,
+    price: 10.5,
+    currency: "USD",
+    features: [
+      "Full POS functionality",
+      "Offline mode",
+      "Local data storage",
+      "Basic reporting",
+    ],
+    proFeatures: [
+      "Cloud sync across devices",
+      "Web analytics dashboard",
+      "Employee management",
+      "Advanced management tools",
+      "Priority support",
+    ],
+  },
+  {
+    id: "pro_3month",
+    tier: "pro",
+    name: "Pro - 3 Months",
+    description: "Full features (Save 10%)",
+    duration: 3,
+    price: 28.35,
+    currency: "USD",
+    features: [
+      "Full POS functionality",
+      "Offline mode",
+      "Local data storage",
+      "Basic reporting",
+    ],
+    proFeatures: [
+      "Cloud sync across devices",
+      "Web analytics dashboard",
+      "Employee management",
+      "Advanced management tools",
+      "Priority support",
+    ],
+  },
+  {
+    id: "pro_6month",
+    tier: "pro",
+    name: "Pro - 6 Months",
+    description: "Full features (Save 15%)",
+    duration: 6,
+    price: 53.55,
+    currency: "USD",
+    features: [
+      "Full POS functionality",
+      "Offline mode",
+      "Local data storage",
+      "Basic reporting",
+    ],
+    proFeatures: [
+      "Cloud sync across devices",
+      "Web analytics dashboard",
+      "Employee management",
+      "Advanced management tools",
+      "Priority support",
+    ],
+  },
+  {
+    id: "pro_12month",
+    tier: "pro",
+    name: "Pro - 12 Months",
+    description: "Full features (Save 20%)",
+    duration: 12,
+    price: 100.8,
+    currency: "USD",
+    features: [
+      "Full POS functionality",
+      "Offline mode",
+      "Local data storage",
+      "Basic reporting",
+    ],
+    proFeatures: [
+      "Cloud sync across devices",
+      "Web analytics dashboard",
+      "Employee management",
+      "Advanced management tools",
+      "Priority support",
+    ],
+  },
+];
+
+function formatPrice(price: number, currency: string = "USD"): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currency,
+  }).format(price);
+}
+
+function calculateMonthlyPrice(price: number, duration: number): string {
+  const monthly = price / duration;
+  return formatPrice(monthly, "USD") + "/month";
+}
+
 export const metadata = {
   title: "DripPOS - Modern Point of Sale System",
   description: "Powerful, user-friendly POS system for cafes, restaurants, and retail businesses. Manage orders, inventory, and staff with ease.",
@@ -123,10 +289,11 @@ export default function LandingPage() {
       <section className="section">
         <div className="container">
           <div className="section-header">
-            <h2 className="section-title">Simple Pricing</h2>
-            <p className="section-subtitle">Start free, upgrade when you grow</p>
+            <h2 className="section-title">Choose Your Plan</h2>
+            <p className="section-subtitle">Start with a 30-day free trial, upgrade when you grow</p>
           </div>
           <div className="pricing-grid">
+            {/* Free Trial Card */}
             <PricingCard
               title="Free Trial"
               price="0"
@@ -134,45 +301,99 @@ export default function LandingPage() {
               features={[
                 "All core features",
                 "Pro features",
-                "Basic analytics",
-                "Email support",
+                "Cloud sync",
+                "Web analytics dashboard",
+                "Employee management",
+                "Priority support",
               ]}
               cta="Start Free Trial"
               href="/login"
               popular={false}
             />
+            {/* Popular Pro Plan */}
             <PricingCard
-              title="Basic"
-              price="49"
+              title="Pro - 1 Month"
+              price={formatPrice(10.5)}
               period="month"
               features={[
-                "Unlimited products",
-                "5 staff accounts",
-                "Advanced analytics",
+                "Full POS functionality",
+                "Offline mode",
+                "Local data storage",
+                "Basic reporting",
+              ]}
+              proFeatures={[
+                "Cloud sync across devices",
+                "Web analytics dashboard",
+                "Employee management",
+                "Advanced management tools",
                 "Priority support",
-                "Cloud sync",
-                "Receipt printing",
               ]}
               cta="Get Started"
               href="/login"
               popular={true}
             />
+            {/* Best Value Pro Plan */}
             <PricingCard
-              title="Pro"
-              price="99"
-              period="month"
+              title="Pro - 12 Months"
+              price={formatPrice(100.8)}
+              period="year"
               features={[
-                "Unlimited everything",
-                "Unlimited staff",
-                "Advanced reporting",
-                "24/7 support",
-                "Custom branding",
-                "API access",
+                "Full POS functionality",
+                "Offline mode",
+                "Local data storage",
+                "Basic reporting",
               ]}
-              cta="Contact Sales"
-              href="#contact"
+              proFeatures={[
+                "Cloud sync across devices",
+                "Web analytics dashboard",
+                "Employee management",
+                "Advanced management tools",
+                "Priority support",
+              ]}
+              badge="Save 20%"
+              cta="Get Started"
+              href="/login"
               popular={false}
             />
+          </div>
+          
+          {/* Additional Plan Options */}
+          <div className="section-header" style={{ marginTop: "60px" }}>
+            <h3 className="section-title">More Plan Options</h3>
+            <p className="section-subtitle">Choose the duration that works for you</p>
+          </div>
+          
+          <div className="pricing-grid">
+            {PLAN_CONFIGS.filter(plan => plan.tier === "basic").map((plan) => (
+              <PricingCard
+                key={plan.id}
+                title={plan.name}
+                price={formatPrice(plan.price)}
+                period={plan.duration === 1 ? "month" : `${plan.duration} months`}
+                features={plan.features}
+                badge={plan.duration >= 6 ? `Save ${plan.duration === 3 ? "10%" : plan.duration === 6 ? "15%" : "20%"}` : undefined}
+                cta="Get Started"
+                href="/login"
+                popular={false}
+              />
+            ))}
+          </div>
+          
+          <div className="pricing-grid" style={{ marginTop: "30px" }}>
+            {PLAN_CONFIGS.filter(plan => plan.tier === "pro" && plan.duration !== 1 && plan.duration !== 12).map((plan) => (
+              <PricingCard
+                key={plan.id}
+                title={plan.name}
+                price={formatPrice(plan.price)}
+                period={plan.duration === 1 ? "month" : `${plan.duration} months`}
+                features={plan.features}
+                proFeatures={plan.proFeatures}
+                badge={plan.duration >= 6 ? `Save ${plan.duration === 3 ? "10%" : plan.duration === 6 ? "15%" : "20%"}` : undefined}
+                cta="Get Started"
+                href="/login"
+                popular={false}
+              />
+            ))}
           </div>
         </div>
       </section>
@@ -265,27 +486,46 @@ function Step({ number, title, description }: { number: number; title: string; d
   );
 }
 
-function PricingCard({ title, price, period, features, cta, href, popular }: { 
+function PricingCard({ 
+  title, 
+  price, 
+  period, 
+  features, 
+  proFeatures, 
+  badge, 
+  cta, 
+  href, 
+  popular 
+}: { 
   title: string; 
   price: string; 
   period: string; 
   features: string[]; 
+  proFeatures?: string[];
+  badge?: string;
   cta: string; 
   href: string; 
   popular: boolean 
 }) {
   return (
     <div className={`pricing-card ${popular ? 'pricing-card-popular' : ''}`}>
-      {popular && <div className="pricing-badge">Most Popular</div>}
+      {badge && <div className="pricing-badge">{badge}</div>}
+      {popular && !badge && <div className="pricing-badge">Most Popular</div>}
       <h3 className="pricing-title">{title}</h3>
       <div className="pricing-price">
-        <span className="pricing-amount">${price}</span>
+        <span className="pricing-amount">{price}</span>
         <span className="pricing-period">/{period}</span>
       </div>
       <ul className="pricing-features">
         {features.map((feature, index) => (
           <li key={index} className="pricing-feature">
             <CheckCircle2 className="w-4 h-4" />
+            {feature}
+          </li>
+        ))}
+        {proFeatures && proFeatures.map((feature, index) => (
+          <li key={`pro-${index}`} className="pricing-feature pro-feature">
+            <Zap className="w-4 h-4" />
             {feature}
           </li>
         ))}
