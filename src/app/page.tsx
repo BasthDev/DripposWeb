@@ -130,11 +130,10 @@ export default function LandingPage() {
             <PricingCard
               title="Free Trial"
               price="0"
-              period="14 days"
+              period="30 days"
               features={[
                 "All core features",
-                "Up to 100 products",
-                "2 staff accounts",
+                "Pro features",
                 "Basic analytics",
                 "Email support",
               ]}
