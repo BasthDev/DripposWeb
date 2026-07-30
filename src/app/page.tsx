@@ -13,6 +13,7 @@ import {
   CreditCard,
   Eye,
   FileSpreadsheet,
+  FileText,
   FolderTree,
   Layers,
   LayoutDashboard,
@@ -24,13 +25,14 @@ import {
   Radio,
   RefreshCw,
   Search,
+  Shield,
   ShoppingBag,
   Star,
   Trash2,
   TrendingUp,
   Users,
   X,
-  Zap,
+  Zap
 } from "lucide-react";
 import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -889,6 +891,19 @@ export default function App() {
                 {loading ? "Signing in..." : "Sign In to Dashboard"}
               </button>
             </form>
+            
+            {/* Legal Links */}
+            <div className="login-legal-links">
+              <a href="/privacy-policy" className="login-legal-link">
+                <Shield size={14} />
+                <span>Privacy Policy</span>
+              </a>
+              <span className="login-legal-separator">•</span>
+              <a href="/terms-of-service" className="login-legal-link">
+                <FileText size={14} />
+                <span>Terms of Service</span>
+              </a>
+            </div>
           </div>
         </div>
         <Toasts toasts={toasts} />
@@ -1151,6 +1166,18 @@ function Dashboard({
                 size={13}
                 style={{ color: "var(--danger)", flexShrink: 0 }}
               />
+            </div>
+            
+            {/* Legal Links */}
+            <div className="legal-links">
+              <a href="/privacy-policy" className="legal-link">
+                <Shield size={14} />
+                <span>Privacy Policy</span>
+              </a>
+              <a href="/terms-of-service" className="legal-link">
+                <FileText size={14} />
+                <span>Terms of Service</span>
+              </a>
             </div>
           </div>
         </aside>
