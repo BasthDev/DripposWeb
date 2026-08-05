@@ -2,7 +2,7 @@ import { Account, Client, Databases, Functions } from "appwrite";
 
 const endpoint =
   process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT ||
-  "https://sgp.cloud.appwrite.io/v1";
+  "https://api.basthstudio.my.id//v1";
 const projectId =
   process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID || "6a302b52000d71807c6f";
 const databaseId =
